@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test AI Valuation</title>
+</head>
+<body>
+    <h1>ระบบประเมินราคามือสอง</h1>
+    <input type="file" id="fileInput" accept="image/*">
+    <select id="brand">
+        <option value="iphone">iPhone</option>
+        <option value="samsung">Samsung</option>
+    </select>
+    <select id="model">
+        <option value="14">14</option>
+        <option value="13">13</option>
+    </select>
+    <button onclick="evaluate()">ประเมิน</button>
+    <div id="result"></div>
+
+    <script>
+        async function evaluate() {
+            const file = document.getElementById('fileInput').files[0];
+            if (!file) {
+                alert('เลือกรูปก่อน');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('brand', document.getElementById('brand').value);
+            formData.append('model', document.getElementById('model').value);
+            formData.append('age_months', 12);
+            formData.append('has_box', true);
+            formData.append('has_charger', true);
+            
+            document.getElementById('result').innerHTML = 'กำลังประมวลผล...';
+            
+            try {
+                const response = await fetch('http://localhost:8001/evaluate', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                document.getElementById('result').innerHTML = JSON.stringify(data, null, 2);
+            } catch(error) {
+                document.getElementById('result').innerHTML = 'Error: ' + error;
+            }
+        }
+    </script>
+</body>
+</html>

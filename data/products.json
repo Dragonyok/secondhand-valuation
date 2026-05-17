@@ -1,0 +1,51 @@
+{
+  "apple_14": {
+    "brand": "apple",
+    "model": "14",
+    "new_price": 32900,
+    "secondhand_avg": 25000,
+    "buy_price": 22000
+  },
+  "apple_13": {
+    "brand": "apple",
+    "model": "13",
+    "new_price": 29900,
+    "secondhand_avg": 18000,
+    "buy_price": 15000
+  },
+  "apple_12": {
+    "brand": "apple",
+    "model": "12",
+    "new_price": 25900,
+    "secondhand_avg": 13000,
+    "buy_price": 10000
+  },
+  "samsung_S23": {
+    "brand": "samsung",
+    "model": "S23",
+    "new_price": 28900,
+    "secondhand_avg": 19000,
+    "buy_price": 16000
+  },
+  "samsung_S22": {
+    "brand": "samsung",
+    "model": "S22",
+    "new_price": 26900,
+    "secondhand_avg": 14000,
+    "buy_price": 11000
+  },
+  "xiaomi_13": {
+    "brand": "xiaomi",
+    "model": "13",
+    "new_price": 16900,
+    "secondhand_avg": 9000,
+    "buy_price": 7000
+  },
+  "canon_r50": {
+    "brand": "Canon",
+    "model": "R50",
+    "new_price": 25900,
+    "secondhand_avg": 18000,
+    "buy_price": 13000
+  }
+}

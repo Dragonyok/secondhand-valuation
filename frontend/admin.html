@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ValuAI Admin Panel - จัดการยี่ห้อและรุ่นสินค้า</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f0f23;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            position: fixed;
+            height: 100vh;
+            padding: 24px;
+            color: white;
+        }
+
+        .sidebar h2 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar .subtitle {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 32px;
+        }
+
+        .sidebar nav a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: white;
+            text-decoration: none;
+            padding: 12px 16px;
+            margin: 8px 0;
+            border-radius: 12px;
+            transition: all 0.3s;
+        }
+
+        .sidebar nav a:hover, .sidebar nav a.active {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            padding: 24px;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            padding: 20px 24px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: #1a1f36;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logout-btn {
+            background: #ef4444;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: none;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .card h3 {
+            margin-bottom: 20px;
+            color: #1a1f36;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Forms */
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+        }
+
+        .btn-danger {
+            background: #ef4444;
+        }
+
+        .btn-success {
+            background: #10b981;
+        }
+
+        .btn-warning {
+            background: #f59e0b;
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #475569;
+        }
+
+        tr:hover {
+            background: #f8fafc;
+        }
+
+        /* Login Page */
+        .login-container {
+            max-width: 400px;
+            margin: 100px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .login-container h2 {
+            margin-bottom: 24px;
+            color: #1a1f36;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: #64748b;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Page -->
+    <div id="loginPage">
+        <div class="login-container">
+            <h2>🔐 ValuAI Admin Login</h2>
+            <input type="text" id="username" placeholder="Username" value="admin" style="margin-bottom: 12px;">
+            <input type="password" id="password" placeholder="Password" value="admin123" style="margin-bottom: 20px;">
+            <button onclick="login()" style="width: 100%;">เข้าสู่ระบบ</button>
+            <p style="margin-top: 16px; font-size: 12px; color: #94a3b8;">Default: admin / admin123</p>
+        </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="adminPanel" class="hidden">
+        <div class="sidebar">
+            <h2>📱 ValuAI</h2>
+            <div class="subtitle">Admin Control Panel</div>
+            <nav>
+                <a href="#" onclick="showPage('dashboard')" class="active" id="nav-dashboard">
+                    📊 แดชบอร์ด
+                </a>
+                <a href="#" onclick="showPage('brands')" id="nav-brands">
+                    🏷️ จัดการยี่ห้อ
+                </a>
+                <a href="#" onclick="showPage('products')" id="nav-products">
+                    📦 จัดการสินค้า
+                </a>
+                <a href="#" onclick="showPage('history')" id="nav-history">
+                    📜 ประวัติการประเมิน
+                </a>
+                <a href="#" onclick="showPage('buy')" id="nav-buy">
+                    💰 รับซื้อสินค้า
+                </a>
+            </nav>
+        </div>
+
+        <div class="main-content">
+            <div class="header">
+                <h1 id="pageTitle">แดชบอร์ด</h1>
+                <div class="user-info">
+                    <span>👤 <span id="userName">Admin</span></span>
+                    <button class="logout-btn" onclick="logout()">ออกจากระบบ</button>
+                </div>
+            </div>
+
+            <!-- Dashboard Page -->
+            <div id="dashboardPage">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="statBrands">0</div>
+                        <div class="stat-label">ยี่ห้อทั้งหมด</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="statProducts">0</div>
+                        <div class="stat-label">รุ่นสินค้า</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="statHistory">0</div>
+                        <div class="stat-label">การประเมินทั้งหมด</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>📈 คำแนะนำสำหรับ Admin</h3>
+                    <ul style="margin-left: 20px; color: #475569;">
+                        <li>เพิ่มยี่ห้อใหม่ในเมนู "จัดการยี่ห้อ"</li>
+                        <li>เพิ่มรุ่นสินค้าและราคาในเมนู "จัดการสินค้า"</li>
+                        <li>ระบบจะดึงข้อมูลล่าสุดมาใช้ในการประเมินอัตโนมัติ</li>
+                        <li>สามารถดูประวัติการประเมินทั้งหมดได้ในเมนู "ประวัติการประเมิน"</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Brands Management Page -->
+            <div id="brandsPage" class="hidden">
+                <div class="card">
+                    <h3>➕ เพิ่มยี่ห้อใหม่</h3>
+                    <div class="form-row">
+                        <input type="text" id="brandId" placeholder="รหัสยี่ห้อ (เช่น samsung)">
+                        <input type="text" id="brandName" placeholder="ชื่อยี่ห้อ (เช่น Samsung)">
+                        <input type="text" id="brandIcon" placeholder="ไอคอน (เช่น 📱)" value="📱">
+                    </div>
+                    <div class="form-row">
+                        <input type="text" id="brandModels" placeholder="รุ่นเริ่มต้น (คั่นด้วยจุลภาค เช่น S24,S23,S22)">
+                    </div>
+                    <button onclick="addBrand()">➕ เพิ่มยี่ห้อ</button>
+                </div>
+
+                <div class="card">
+                    <h3>📋 รายการยี่ห้อทั้งหมด</h3>
+                    <div class="table-container">
+                        <table id="brandsTable">
+                            <thead>
+                                <tr><th>รหัส</th><th>ไอคอน</th><th>ชื่อยี่ห้อ</th><th>รุ่นที่มี</th><th>จัดการ</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products Management Page -->
+            <div id="productsPage" class="hidden">
+                <div class="card">
+                    <h3>➕ เพิ่มสินค้าใหม่</h3>
+                    <div class="form-row">
+                        <select id="productBrand" style="margin-bottom: 0;">
+                            <option value="">เลือกยี่ห้อ</option>
+                        </select>
+                        <input type="text" id="productModel" placeholder="รุ่น (เช่น iPhone 14)">
+                    </div>
+                    <div class="form-row">
+                        <input type="number" id="productNewPrice" placeholder="ราคาใหม่">
+                        <input type="number" id="productSecondhandPrice" placeholder="ราคามือสองเฉลี่ย">
+                        <input type="number" id="productBuyPrice" placeholder="ราคารับซื้อ">
+                    </div>
+                    <button onclick="addProduct()">➕ เพิ่มสินค้า</button>
+                </div>
+
+                <div class="card">
+                    <h3>📋 รายการสินค้าทั้งหมด</h3>
+                    <div class="table-container">
+                        <table id="productsTable">
+                            <thead>
+                                <tr><th>รหัสสินค้า</th><th>ยี่ห้อ</th><th>รุ่น</th><th>ราคาใหม่</th><th>มือสอง</th><th>รับซื้อ</th><th>จัดการ</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Page -->
+            <div id="historyPage" class="hidden">
+                <div class="card">
+                    <h3>📜 ประวัติการประเมินล่าสุด</h3>
+                    <div class="table-container">
+                        <table id="historyTable">
+                            <thead>
+                                <tr><th>เวลา</th><th>สินค้า</th><th>เกรด</th><th>ราคา</th><th>ราคารับซื้อ</th><th>ตำหนิ</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Buy Page -->
+            <div id="buyPage" class="hidden">
+                <div class="card">
+                    <h3>💰 รับซื้อสินค้ามือสอง</h3>
+                    <div class="form-row">
+                        <select id="buyProduct">
+                            <option value="">เลือกสินค้า</option>
+                        </select>
+                        <select id="buyGrade">
+                            <option value="A">เกรด A (สภาพเหมือนใหม่) - 95%</option>
+                            <option value="B">เกรด B (สภาพดี) - 85%</option>
+                            <option value="C">เกรด C (มีรอย) - 70%</option>
+                            <option value="D">เกรด D (สภาพแย่) - 50%</option>
+                        </select>
+                    </div>
+                    <button onclick="calculateBuyPrice()">คำนวณราคารับซื้อ</button>
+                    <div id="buyResult" class="hidden" style="margin-top: 20px; padding: 16px; background: #d1fae5; border-radius: 12px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let authToken = null;
+
+        // ========== LOGIN ==========
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const auth = btoa(`${username}:${password}`);
+            
+            try {
+                const response = await fetch('http://localhost:8002/admin/brands', {
+                    headers: { 'Authorization': `Basic ${auth}` }
+                });
+                
+                if (response.ok) {
+                    authToken = auth;
+                    document.getElementById('loginPage').classList.add('hidden');
+                    document.getElementById('adminPanel').classList.remove('hidden');
+                    loadDashboard();
+                    loadBrands();
+                    loadProducts();
+                    loadHistory();
+                    loadBuyProducts();
+                    showPage('dashboard');
+                } else {
+                    alert('❌ รหัสผ่านไม่ถูกต้อง');
+                }
+            } catch(e) {
+                alert('❌ ไม่สามารถเชื่อมต่อ Admin Server ได้\nกรุณาเปิด admin_server.py ที่ port 8002');
+            }
+        }
+
+        function logout() {
+            document.getElementById('loginPage').classList.remove('hidden');
+            document.getElementById('adminPanel').classList.add('hidden');
+            authToken = null;
+        }
+
+        // ========== PAGE NAVIGATION ==========
+        function showPage(page) {
+            document.getElementById('dashboardPage').classList.add('hidden');
+            document.getElementById('brandsPage').classList.add('hidden');
+            document.getElementById('productsPage').classList.add('hidden');
+            document.getElementById('historyPage').classList.add('hidden');
+            document.getElementById('buyPage').classList.add('hidden');
+            
+            document.getElementById(`${page}Page`).classList.remove('hidden');
+            
+            const titles = {
+                dashboard: 'แดชบอร์ด',
+                brands: 'จัดการยี่ห้อ',
+                products: 'จัดการสินค้า',
+                history: 'ประวัติการประเมิน',
+                buy: 'รับซื้อสินค้า'
+            };
+            document.getElementById('pageTitle').innerText = titles[page];
+            
+            // Update active nav
+            document.querySelectorAll('.sidebar nav a').forEach(a => a.classList.remove('active'));
+            document.getElementById(`nav-${page}`).classList.add('active');
+            
+            // Reload data
+            if (page === 'dashboard') loadDashboard();
+            if (page === 'brands') loadBrands();
+            if (page === 'products') loadProducts();
+            if (page === 'history') loadHistory();
+            if (page === 'buy') loadBuyProducts();
+        }
+
+        // ========== DASHBOARD ==========
+        async function loadDashboard() {
+            try {
+                const products = await fetchAPI('/admin/products/all');
+                const history = await fetchAPI('/admin/history');
+                const brands = await fetchAPI('/admin/brands');
+                
+                document.getElementById('statBrands').innerText = Object.keys(brands).length;
+                document.getElementById('statProducts').innerText = Object.keys(products).length;
+                document.getElementById('statHistory').innerText = history.length;
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        // ========== BRANDS MANAGEMENT ==========
+        async function loadBrands() {
+            const brands = await fetchAPI('/admin/brands');
+            const tbody = document.querySelector('#brandsTable tbody');
+            tbody.innerHTML = '';
+            
+            for (const [id, brand] of Object.entries(brands)) {
+                tbody.innerHTML += `
+                    <tr>
+                        <td><code>${id}</code></td>
+                        <td style="font-size: 24px;">${brand.icon || '📱'}</td>
+                        <td>${brand.name}</td>
+                        <td>${brand.models?.join(', ') || '-'}</td>
+                        <td>
+                            <button class="btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick="deleteBrand('${id}')">ลบ</button>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        async function addBrand() {
+            const brandId = document.getElementById('brandId').value;
+            const brandName = document.getElementById('brandName').value;
+            const brandIcon = document.getElementById('brandIcon').value;
+            const modelsStr = document.getElementById('brandModels').value;
+            const models = modelsStr ? modelsStr.split(',').map(m => m.trim()) : [];
+            
+            if (!brandId || !brandName) {
+                alert('กรุณากรอกรหัสและชื่อยี่ห้อ');
+                return;
+            }
+            
+            await fetchAPI(`/admin/brand/${brandId}`, 'POST', {
+                name: brandName,
+                icon: brandIcon,
+                models: models
+            });
+            
+            alert('✅ เพิ่มยี่ห้อเรียบร้อย');
+            document.getElementById('brandId').value = '';
+            document.getElementById('brandName').value = '';
+            document.getElementById('brandModels').value = '';
+            loadBrands();
+            loadDashboard();
+        }
+
+        async function deleteBrand(brandId) {
+            if (confirm(`ลบยี่ห้อนี้? สินค้าที่เกี่ยวข้องจะยังคงอยู่`)) {
+                await fetchAPI(`/admin/brand/${brandId}`, 'DELETE');
+                alert('✅ ลบยี่ห้อเรียบร้อย');
+                loadBrands();
+                loadDashboard();
+            }
+        }
+
+        // ========== PRODUCTS MANAGEMENT ==========
+        async function loadProducts() {
+            const products = await fetchAPI('/admin/products/all');
+            const tbody = document.querySelector('#productsTable tbody');
+            tbody.innerHTML = '';
+            
+            for (const [key, product] of Object.entries(products)) {
+                tbody.innerHTML += `
+                    <tr>
+                        <td><code>${key}</code></td>
+                        <td>${product.brand}</td>
+                        <td>${product.model}</td>
+                        <td>${product.new_price?.toLocaleString()}</td>
+                        <td>${product.secondhand_avg?.toLocaleString()}</td>
+                        <td>${product.buy_price?.toLocaleString()}</td>
+                        <td>
+                            <button class="btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick="deleteProduct('${key}')">ลบ</button>
+                        </td>
+                    </tr>
+                `;
+            }
+            
+            // Load brands into select
+            const brands = await fetchAPI('/admin/brands');
+            const brandSelect = document.getElementById('productBrand');
+            brandSelect.innerHTML = '<option value="">เลือกยี่ห้อ</option>';
+            for (const [id, brand] of Object.entries(brands)) {
+                brandSelect.innerHTML += `<option value="${id}">${brand.icon} ${brand.name}</option>`;
+            }
+        }
+
+        async function addProduct() {
+            const brand = document.getElementById('productBrand').value;
+            const model = document.getElementById('productModel').value;
+            const newPrice = parseInt(document.getElementById('productNewPrice').value);
+            const secondhandPrice = parseInt(document.getElementById('productSecondhandPrice').value);
+            const buyPrice = parseInt(document.getElementById('productBuyPrice').value);
+            
+            if (!brand || !model || !newPrice || !secondhandPrice || !buyPrice) {
+                alert('กรุณากรอกข้อมูลให้ครบ');
+                return;
+            }
+            
+            await fetchAPI('/admin/product/new', 'POST', {
+                brand: brand,
+                model: model,
+                new_price: newPrice,
+                secondhand_avg: secondhandPrice,
+                buy_price: buyPrice
+            });
+            
+            alert('✅ เพิ่มสินค้าเรียบร้อย');
+            document.getElementById('productModel').value = '';
+            document.getElementById('productNewPrice').value = '';
+            document.getElementById('productSecondhandPrice').value = '';
+            document.getElementById('productBuyPrice').value = '';
+            loadProducts();
+            loadDashboard();
+        }
+
+        async function deleteProduct(productKey) {
+            if (confirm(`ลบสินค้า ${productKey}?`)) {
+                await fetchAPI(`/admin/product/${productKey}`, 'DELETE');
+                alert('✅ ลบสินค้าเรียบร้อย');
+                loadProducts();
+                loadDashboard();
+            }
+        }
+
+        // ========== HISTORY ==========
+        async function loadHistory() {
+            const history = await fetchAPI('/admin/history');
+            const tbody = document.querySelector('#historyTable tbody');
+            tbody.innerHTML = '';
+            
+            history.reverse().forEach(item => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${new Date(item.timestamp).toLocaleString('th-TH')}</td>
+                        <td>${item.product}</td>
+                        <td><span class="badge badge-success">${item.condition}</span></td>
+                        <td>${item.price?.toLocaleString() || '-'}</td>
+                        <td>${item.buy_price?.toLocaleString() || '-'}</td>
+                        <td style="max-width: 200px;">${item.defects?.join(', ') || '-'}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // ========== BUY ==========
+        async function loadBuyProducts() {
+            const products = await fetchAPI('/admin/products/all');
+            const select = document.getElementById('buyProduct');
+            select.innerHTML = '<option value="">เลือกสินค้า</option>';
+            for (const [key, product] of Object.entries(products)) {
+                select.innerHTML += `<option value="${key}" data-brand="${product.brand}" data-model="${product.model}" data-buy-price="${product.buy_price}">${product.brand} - ${product.model}</option>`;
+            }
+        }
+
+        async function calculateBuyPrice() {
+            const select = document.getElementById('buyProduct');
+            const selectedOption = select.options[select.selectedIndex];
+            const productKey = select.value;
+            const grade = document.getElementById('buyGrade').value;
+            
+            if (!productKey) {
+                alert('กรุณาเลือกสินค้า');
+                return;
+            }
+            
+            const gradeMultiplier = { 'A': 0.95, 'B': 0.85, 'C': 0.70, 'D': 0.50 };
+            const buyPrice = parseInt(selectedOption.dataset.buyPrice);
+            const finalPrice = Math.round(buyPrice * gradeMultiplier[grade]);
+            
+            document.getElementById('buyResult').innerHTML = `
+                <div style="font-weight: bold; font-size: 24px; color: #065f46;">💰 ${finalPrice.toLocaleString()} บาท</div>
+                <div style="margin-top: 8px;">ราคารับซื้อพื้นฐาน: ${buyPrice.toLocaleString()} บาท</div>
+                <div>ปรับตามสภาพ (เกรด ${grade}): ${gradeMultiplier[grade] * 100}%</div>
+                <button onclick="confirmBuy('${productKey}', ${finalPrice})" style="margin-top: 12px;">✅ ยืนยันรับซื้อ</button>
+            `;
+            document.getElementById('buyResult').classList.remove('hidden');
+        }
+
+        function confirmBuy(productKey, price) {
+            alert(`✅ บันทึกการรับซื้อ ${productKey} ในราคา ${price.toLocaleString()} บาท`);
+        }
+
+        // ========== HELPER ==========
+        async function fetchAPI(endpoint, method = 'GET', body = null) {
+            const options = {
+                method: method,
+                headers: { 'Authorization': `Basic ${authToken}` }
+            };
+            if (body) {
+                options.headers['Content-Type'] = 'application/json';
+                options.body = JSON.stringify(body);
+            }
+            
+            const response = await fetch(`http://localhost:8002${endpoint}`, options);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return await response.json();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+{
+  "iphone_14": {
+    "new_price": 32900,
+    "secondhand_avg": 25000
+  },
+  "iphone_13": {
+    "new_price": 29900,
+    "secondhand_avg": 18000
+  },
+  "iphone_12": {
+    "new_price": 25900,
+    "secondhand_avg": 13000
+  },
+  "samsung_s23": {
+    "new_price": 28900,
+    "secondhand_avg": 19000
+  },
+  "samsung_s22": {
+    "new_price": 26900,
+    "secondhand_avg": 14000
+  },
+  "xiaomi_12": {
+    "new_price": 16900,
+    "secondhand_avg": 9000
+  },
+  "poco_f4": {
+    "new_price": 12900,
+    "secondhand_avg": 7000
+  },
+  "Canon EOS R50": {
+    "new_price": 22900,
+    "secondhand_avg": 15000,
+    "buy_price": 13000
+  }
+}

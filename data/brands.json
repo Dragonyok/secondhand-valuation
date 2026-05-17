@@ -1,0 +1,82 @@
+{
+  "apple": {
+    "name": "Apple iPhone",
+    "icon": "🍎",
+    "models": [
+      "14",
+      "13",
+      "12",
+      "11",
+      "SE"
+    ]
+  },
+  "samsung": {
+    "name": "Samsung",
+    "icon": "📱",
+    "models": [
+      "S24",
+      "S23",
+      "S22",
+      "A54",
+      "A34"
+    ]
+  },
+  "xiaomi": {
+    "name": "Xiaomi",
+    "icon": "📱",
+    "models": [
+      "13",
+      "12",
+      "11",
+      "Redmi Note 12"
+    ]
+  },
+  "poco": {
+    "name": "Poco",
+    "icon": "⚡",
+    "models": [
+      "F5",
+      "F4",
+      "X5",
+      "M5"
+    ]
+  },
+  "huawei": {
+    "name": "Huawei",
+    "icon": "📱",
+    "models": [
+      "P60",
+      "P50",
+      "Mate 50",
+      "Nova 11"
+    ]
+  },
+  "oppo": {
+    "name": "OPPO",
+    "icon": "📱",
+    "models": [
+      "Find X6",
+      "Reno 10",
+      "A78"
+    ]
+  },
+  "vivo": {
+    "name": "vivo",
+    "icon": "📱",
+    "models": [
+      "X100",
+      "V29",
+      "Y36"
+    ]
+  },
+  "Canon": {
+    "name": "Canon EOS",
+    "icon": "📱",
+    "models": [
+      "R50",
+      "RP",
+      "R10",
+      "R100"
+    ]
+  }
+}

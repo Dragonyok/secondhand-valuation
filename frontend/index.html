@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ValuAI - ประเมินราคามือสองด้วย AI</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 40px; }
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: white;
+            padding: 12px 32px;
+            border-radius: 60px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .logo h1 { color: #667eea; }
+        .tagline { color: white; margin-top: 16px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+        .card {
+            background: white;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px 24px;
+            color: white;
+        }
+        .card-header h2 { display: flex; align-items: center; gap: 10px; }
+        .card-body { padding: 24px; }
+        
+        /* Multi Upload Area */
+        .upload-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .upload-slot {
+            border: 2px dashed #cbd5e1;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8fafc;
+            position: relative;
+        }
+        .upload-slot:hover { border-color: #667eea; background: #f1f5f9; }
+        .upload-slot.selected { border-color: #10b981; background: #d1fae5; }
+        .slot-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+        .slot-icon { font-size: 32px; margin-bottom: 8px; }
+        .slot-text { font-size: 12px; color: #94a3b8; }
+        .slot-preview {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-top: 8px;
+            display: none;
+        }
+        .slot-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #10b981;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .upload-note {
+            background: #e0f2fe;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            margin-top: 15px;
+            text-align: center;
+        }
+        
+        .form-group { margin-bottom: 20px; }
+        label { display: block; font-weight: 600; margin-bottom: 8px; color: #334155; }
+        select, input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+        select:focus, input:focus { outline: none; border-color: #667eea; }
+        .checkbox-group { display: flex; gap: 20px; flex-wrap: wrap; }
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: transform 0.2s;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.4); }
+        
+        .price-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+        }
+        .price-value { font-size: 48px; font-weight: bold; }
+        .grade-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 24px;
+            margin: 15px 0;
+        }
+        .grade-A { background: #10b981; color: white; }
+        .grade-B { background: #3b82f6; color: white; }
+        .grade-C { background: #f59e0b; color: white; }
+        .grade-D { background: #ef4444; color: white; }
+        .defects { background: #fef3c7; padding: 12px; border-radius: 12px; margin: 15px 0; }
+        .recommend { background: #dbeafe; padding: 16px; border-radius: 12px; margin-top: 20px; }
+        .loading { text-align: center; padding: 50px; display: none; }
+        .spinner {
+            width: 50px; height: 50px;
+            border: 4px solid #e2e8f0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .factor-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .image-note {
+            padding: 8px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            text-align: center;
+        }
+        .warning-note { background: #fef3c7; color: #92400e; }
+        .success-note { background: #d1fae5; color: #065f46; }
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            color: rgba(255,255,255,0.7);
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <h1>📱 ValuAI</h1>
+            </div>
+            <div class="tagline">ประเมินราคามือสองด้วย AI อัปโหลดครบทุกด้าน เพื่อความแม่นยำสูงสุด!</div>
+        </div>
+
+        <div class="grid">
+            <!-- Left Panel - Upload -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>📸 อัปโหลดสินค้า (หลายด้าน)</h2>
+                </div>
+                <div class="card-body">
+                    <!-- 6 Upload Slots -->
+                    <div class="upload-grid">
+                        <div class="upload-slot" data-slot="front">
+                            <div class="slot-label">📱 ด้านหน้า</div>
+                            <div class="slot-icon">📷</div>
+                            <div class="slot-text">คลิกเพื่ออัปโหลด</div>
+                            <img class="slot-preview" data-preview="front">
+                            <input type="file" class="slot-input" data-slot="front" accept="image/*" style="display:none">
+                        </div>
+                        <div class="upload-slot" data-slot="back">
+                            <div class="slot-label">🔙 ด้านหลัง</div>
+                            <div class="slot-icon">📷</div>
+                            <div class="slot-text">คลิกเพื่ออัปโหลด</div>
+                            <img class="slot-preview" data-preview="back">
+                            <input type="file" class="slot-input" data-slot="back" accept="image/*" style="display:none">
+                        </div>
+                        <div class="upload-slot" data-slot="left">
+                            <div class="slot-label">⬅️ ด้านซ้าย</div>
+                            <div class="slot-icon">📷</div>
+                            <div class="slot-text">คลิกเพื่ออัปโหลด</div>
+                            <img class="slot-preview" data-preview="left">
+                            <input type="file" class="slot-input" data-slot="left" accept="image/*" style="display:none">
+                        </div>
+                        <div class="upload-slot" data-slot="right">
+                            <div class="slot-label">➡️ ด้านขวา</div>
+                            <div class="slot-icon">📷</div>
+                            <div class="slot-text">คลิกเพื่ออัปโหลด</div>
+                            <img class="slot-preview" data-preview="right">
+                            <input type="file" class="slot-input" data-slot="right" accept="image/*" style="display:none">
+                        </div>
+                        <div class="upload-slot" data-slot="top">
+                            <div class="slot-label">⬆️ ด้านบน</div>
+                            <div class="slot-icon">📷</div>
+                            <div class="slot-text">คลิกเพื่ออัปโหลด</div>
+                            <img class="slot-preview" data-preview="top">
+                            <input type="file" class="slot-input" data-slot="top" accept="image/*" style="display:none">
+                        </div>
+                        <div class="upload-slot" data-slot="defect">
+                            <div class="slot-label">🔍 จุดตำหนิ</div>
+                            <div class="slot-icon">🔬</div>
+                            <div class="slot-text">คลิกเพื่ออัปโหลด</div>
+                            <img class="slot-preview" data-preview="defect">
+                            <input type="file" class="slot-input" data-slot="defect" accept="image/*" style="display:none">
+                        </div>
+                    </div>
+
+                    <div class="upload-note">
+                        💡 แนะนำ: อัปโหลดครบทุกด้านเพื่อการประเมินที่แม่นยำที่สุด<br>
+                        📸 ถ่ายในที่แสงสว่างเพียงพอ และโฟกัสให้ชัดเจน
+                    </div>
+
+                    <div class="form-group">
+                        <label>🏷️ ยี่ห้อ</label>
+                        <select id="brand">
+                            <option>กำลังโหลด...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>📱 รุ่น</label>
+                        <select id="model">
+                            <option>เลือกยี่ห้อก่อน</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>📅 อายุสินค้า (เดือน)</label>
+                        <input type="number" id="age" value="12" min="0" max="60">
+                    </div>
+
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" id="hasBox" checked> 📦 มีกล่อง</label>
+                        <label><input type="checkbox" id="hasCharger" checked> 🔌 มีอุปกรณ์ชาร์จ</label>
+                    </div>
+
+                    <button class="btn" id="evaluateBtn">🔍 ประเมินราคา (จากทุกด้าน)</button>
+                </div>
+            </div>
+
+            <!-- Right Panel - Result -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>📊 ผลการประเมิน</h2>
+                </div>
+                <div class="card-body" id="resultPanel">
+                    <div style="text-align: center; padding: 50px; color: #94a3b8;">
+                        📸 อัปโหลดรูปหลายด้าน<br>เพื่อเริ่มประเมินราคา
+                    </div>
+                </div>
+            </div>
+        </div>
+        <footer>
+            <i class="fas fa-shield-alt"></i> ระบบประเมินราคาด้วย AI | ข้อมูลอ้างอิงจาก Admin | แม่นยำ 85%
+        </footer>
+    </div>
+
+    <script>
+        // Store uploaded images
+        let uploadedImages = {
+            front: null,
+            back: null,
+            left: null,
+            right: null,
+            top: null,
+            defect: null
+        };
+
+        // Setup upload slots
+        document.querySelectorAll('.upload-slot').forEach(slot => {
+            const slotName = slot.dataset.slot;
+            const fileInput = slot.querySelector('.slot-input');
+            const preview = slot.querySelector('.slot-preview');
+            
+            slot.onclick = () => fileInput.click();
+            
+            fileInput.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    uploadedImages[slotName] = file;
+                    slot.classList.add('selected');
+                    
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        preview.src = event.target.result;
+                        preview.style.display = 'block';
+                        const textDiv = slot.querySelector('.slot-text');
+                        if (textDiv) textDiv.style.display = 'none';
+                    };
+                    reader.readAsDataURL(file);
+                    
+                    if (!slot.querySelector('.slot-badge')) {
+                        const badge = document.createElement('div');
+                        badge.className = 'slot-badge';
+                        badge.textContent = '✓';
+                        slot.appendChild(badge);
+                    }
+                }
+            };
+        });
+
+        // Load brands from Admin API
+        async function loadBrands() {
+            try {
+                const response = await fetch('http://localhost:8002/public/brands');
+                if (response.ok) {
+                    const brands = await response.json();
+                    const brandSelect = document.getElementById('brand');
+                    brandSelect.innerHTML = '';
+                    
+                    for (const [id, brand] of Object.entries(brands)) {
+                        const option = document.createElement('option');
+                        option.value = id;
+                        option.textContent = `${brand.icon || '📱'} ${brand.name}`;
+                        brandSelect.appendChild(option);
+                    }
+                    
+                    const firstBrand = Object.keys(brands)[0];
+                    if (firstBrand) {
+                        loadModels(firstBrand);
+                    }
+                } else {
+                    useDefaultBrands();
+                }
+            } catch(e) {
+                console.log('Cannot connect to Admin API, using defaults');
+                useDefaultBrands();
+            }
+        }
+
+        function useDefaultBrands() {
+            const brandSelect = document.getElementById('brand');
+            brandSelect.innerHTML = `
+                <option value="apple">🍎 Apple iPhone</option>
+                <option value="samsung">📱 Samsung</option>
+                <option value="xiaomi">📱 Xiaomi</option>
+            `;
+            loadModels('apple');
+        }
+
+        async function loadModels(brandId) {
+            try {
+                const response = await fetch('http://localhost:8002/public/brands');
+                if (response.ok) {
+                    const brands = await response.json();
+                    const brand = brands[brandId];
+                    const modelSelect = document.getElementById('model');
+                    modelSelect.innerHTML = '';
+                    
+                    if (brand && brand.models && brand.models.length > 0) {
+                        brand.models.forEach(model => {
+                            const option = document.createElement('option');
+                            option.value = model.toLowerCase().replace(/\s/g, '_');
+                            option.textContent = model;
+                            modelSelect.appendChild(option);
+                        });
+                    } else {
+                        modelSelect.innerHTML = '<option value="default">ไม่มีรุ่น</option>';
+                    }
+                }
+            } catch(e) {
+                const modelSelect = document.getElementById('model');
+                modelSelect.innerHTML = '<option value="14">14</option><option value="13">13</option><option value="12">12</option>';
+            }
+        }
+
+        document.getElementById('brand').addEventListener('change', (e) => {
+            if (e.target.value) loadModels(e.target.value);
+        });
+
+        function hasAnyImage() {
+            return Object.values(uploadedImages).some(img => img !== null);
+        }
+
+        function getImageCount() {
+            return Object.values(uploadedImages).filter(img => img !== null).length;
+        }
+
+        // Evaluate
+        document.getElementById('evaluateBtn').onclick = async function() {
+            if (!hasAnyImage()) {
+                alert('⚠️ กรุณาอัปโหลดรูปสินค้าอย่างน้อย 1 ด้าน');
+                return;
+            }
+
+            const imageCount = getImageCount();
+            document.getElementById('resultPanel').innerHTML = `
+                <div class="loading" style="display: block;">
+                    <div class="spinner"></div>
+                    <p>กำลังวิเคราะห์ด้วย AI...</p>
+                    <p style="font-size: 12px; margin-top: 8px;">📸 วิเคราะห์จาก ${imageCount} รูป</p>
+                </div>
+            `;
+
+            // Select main image: front > back > defect > others
+            let mainImage = uploadedImages.front || uploadedImages.back || uploadedImages.defect || 
+                           uploadedImages.left || uploadedImages.right || uploadedImages.top;
+
+            const formData = new FormData();
+            formData.append('file', mainImage);
+            formData.append('brand', document.getElementById('brand').value);
+            formData.append('model', document.getElementById('model').value);
+            formData.append('age_months', document.getElementById('age').value);
+            formData.append('has_box', document.getElementById('hasBox').checked);
+            formData.append('has_charger', document.getElementById('hasCharger').checked);
+            formData.append('image_count', imageCount);
+
+            try {
+                const response = await fetch('http://localhost:8001/evaluate', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    data.image_count = imageCount;
+                    displayResult(data);
+                } else {
+                    document.getElementById('resultPanel').innerHTML = `<div style="color:red; text-align:center;">❌ Error: ${data.error}</div>`;
+                }
+            } catch(error) {
+                document.getElementById('resultPanel').innerHTML = `
+                    <div style="text-align:center;color:red;">
+                        ❌ ไม่สามารถเชื่อมต่อระบบ<br>
+                        <small>ตรวจสอบว่า FastAPI ทำงานที่ port 8001</small>
+                    </div>
+                `;
+            }
+        };
+
+        function displayResult(data) {
+            const grade = data.condition.grade;
+            const gradeClass = `grade-${grade}`;
+            const imageCount = data.image_count || 1;
+            
+            let imageNoteClass = imageCount === 1 ? 'warning-note' : 'success-note';
+            let imageNoteText = imageCount === 1 ? 
+                '⚠️ ประเมินจากรูปเดียว เพื่อความแม่นยำสูงสุด แนะนำอัปโหลดครบทุกด้าน' : 
+                `✅ ประเมินจาก ${imageCount} รูป มีความแม่นยำสูง`;
+            
+            let defectsHtml = '';
+            if (data.condition.defects && data.condition.defects.length > 0) {
+                defectsHtml = `<div class="defects">⚠️ ${data.condition.defects.join(', ')}</div>`;
+            } else {
+                defectsHtml = `<div class="defects" style="background:#d1fae5;">✅ ไม่พบตำหนิรุนแรง</div>`;
+            }
+
+            document.getElementById('resultPanel').innerHTML = `
+                <div class="image-note ${imageNoteClass}">${imageNoteText}</div>
+                <div class="price-box">
+                    <div style="font-size:14px; opacity:0.9;">ราคากลาง</div>
+                    <div class="price-value">${data.valuation.median_price.toLocaleString()} ฿</div>
+                    <div style="margin-top:8px;">ช่วงราคา ${data.valuation.price_range.min.toLocaleString()} - ${data.valuation.price_range.max.toLocaleString()} ฿</div>
+                </div>
+
+                <div style="text-align:center;">
+                    <div class="grade-badge ${gradeClass}">เกรด ${grade}</div>
+                    <div style="margin-top:8px;">คะแนนสภาพ: ${data.condition.score}/100</div>
+                    <div>ความแม่นยำของ AI: ${(data.condition.confidence * 100).toFixed(0)}%</div>
+                </div>
+
+                ${defectsHtml}
+
+                <div style="margin-top:20px;">
+                    <h4>📊 ปัจจัยที่ใช้คำนวณ</h4>
+                    <div class="factor-row">
+                        <span>ราคาตลาดมือสอง</span>
+                        <span style="font-weight:600;">${data.valuation.factors.market_avg.toLocaleString()} ฿</span>
+                    </div>
+                    <div class="factor-row">
+                        <span>ตัวคูณสภาพ (เกรด ${grade})</span>
+                        <span>${(data.valuation.factors.condition_multiplier * 100).toFixed(0)}%</span>
+                    </div>
+                    <div class="factor-row">
+                        <span>ค่าเสื่อมตามอายุ</span>
+                        <span class="factor-value">-${(data.valuation.factors.age_depreciation * 100).toFixed(0)}%</span>
+                    </div>
+                    <div class="factor-row">
+                        <span>โบนัสอุปกรณ์ครบ</span>
+                        <span>+${(data.valuation.factors.accessory_bonus * 100).toFixed(0)}%</span>
+                    </div>
+                    <div class="factor-row" style="border-bottom: none;">
+                        <span><strong>ราคารับซื้อ</strong></span>
+                        <span><strong>${data.valuation.buy_price.toLocaleString()} ฿</strong></span>
+                    </div>
+                </div>
+
+                <div class="recommend">
+                    💡 <strong>คำแนะนำจาก AI:</strong><br>
+                    ${data.recommendation}
+                </div>
+            `;
+        }
+
+        // Initialize
+        loadBrands();
+    </script>
+</body>
+</html>
