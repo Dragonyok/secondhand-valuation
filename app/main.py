@@ -5,7 +5,12 @@ from PIL import Image
 import io
 import json
 import os
-import cv2
+try:
+    import cv2
+    CV2_AVAILABLE = True
+except ImportError:
+    CV2_AVAILABLE = False
+    print("⚠️ OpenCV not available - using simple mode")
 import numpy as np
 from datetime import datetime
 
@@ -95,6 +100,12 @@ def check_image_quality(image_array):
     }
 
 
+def detect_defects(image_array):
+    if not CV2_AVAILABLE:
+        # ถ้าไม่มี OpenCV ให้ return ค่าเริ่มต้น
+        return [], 0.01
+    
+    # ... code เดิม
 def detect_defects_advanced(image_array):
     """ตรวจจับรอยขีดข่วนและตำหนิขั้นสูง (ปรับสำหรับกล้อง/ของใหม่)"""
     gray = cv2.cvtColor(image_array, cv2.COLOR_RGB2GRAY)
