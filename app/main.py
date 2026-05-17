@@ -19,19 +19,8 @@ except ImportError:
 
 import numpy as np
 
-# Database
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-try:
-    from app.database import db
-    print("✅ Database loaded successfully")
-except Exception as e:
-    print(f"⚠️ Database not found: {e}, creating simple version")
-    class SimpleDB:
-        def add_history(self, record): pass
-        def get_history(self, limit=100): return []
-        def get_products(self): return {}
-        def get_product_price(self, brand, model): return None
-    db = SimpleDB()
+# MongoDB Database
+from app.database_mongo import mongo_db
 
 app = FastAPI(title="Second-hand Valuation API")
 
@@ -49,23 +38,18 @@ if os.path.exists(frontend_path):
     app.mount("/static", StaticFiles(directory=frontend_path), name="static")
     print(f"✅ Static files mounted from {frontend_path}")
 
+# ตัวแปรสำหรับเก็บสถานะ connection
+DB_READY = False
+
+@app.on_event("startup")
+async def startup_event():
+    global DB_READY
+    DB_READY = await mongo_db.connect()
+
 def load_price_data():
-    products = db.get_products()
-    prices = {}
-    for key, product in products.items():
-        prices[key] = {
-            "new_price": product["new_price"],
-            "secondhand_avg": product["secondhand_avg"],
-            "buy_price": product.get("buy_price", product["secondhand_avg"] * 0.7)
-        }
-    
-    if not prices:
-        prices = {
-            "iphone_14": {"new_price": 32900, "secondhand_avg": 25000, "buy_price": 22000},
-            "iphone_13": {"new_price": 29900, "secondhand_avg": 18000, "buy_price": 15000},
-            "iphone_12": {"new_price": 25900, "secondhand_avg": 13000, "buy_price": 10000},
-        }
-    return prices
+    """โหลดข้อมูลราคาจาก database"""
+    # ใช้ MongoDB หรือ fallback
+    return {}
 
 def check_image_quality(image_array):
     if not CV2_AVAILABLE:
@@ -183,11 +167,18 @@ def analyze_condition(image, image_count=1):
     }
 
 def calculate_price(brand, model, condition_multiplier, age_months=12, has_box=True, has_charger=True):
-    product = db.get_product_price(brand, model)
-    
-    if product:
-        base_secondhand = product['secondhand_avg']
-        buy_price = product.get('buy_price', base_secondhand * 0.7)
+    # ใช้ข้อมูลจาก MongoDB
+    if DB_READY:
+        import asyncio
+        # เรียก async function
+        loop = asyncio.new_event_loop()
+        product = loop.run_until_complete(mongo_db.get_product_price(brand, model))
+        if product:
+            base_secondhand = product['secondhand_avg']
+            buy_price = product.get('buy_price', base_secondhand * 0.7)
+        else:
+            base_secondhand = 8000
+            buy_price = 5000
     else:
         base_secondhand = 8000
         buy_price = 5000
@@ -229,6 +220,18 @@ async def evaluate_phone(
         condition = analyze_condition(image, image_count)
         price_result = calculate_price(brand, model, condition['multiplier'], age_months, has_box, has_charger)
         
+        # บันทึกประวัติลง MongoDB
+        if DB_READY:
+            await mongo_db.add_history({
+                'product': f"{brand}_{model}",
+                'condition': condition['grade'],
+                'condition_score': condition['score'],
+                'damage_score': condition['damage_score'],
+                'price': price_result['price'],
+                'buy_price': price_result['buy_price'],
+                'defects': condition['defects']
+            })
+        
         result = {
             'success': True,
             'product': {'brand': brand, 'model': model},
@@ -258,35 +261,44 @@ def get_recommendation(grade, price, buy_price, grade_desc):
     else:
         return f"🔧 {grade_desc} ขาย {price:,} บาท หรือซ่อมก่อนขาย | รับซื้อ {buy_price:,} บาท"
 
-# ========== ADMIN & PUBLIC API (สำหรับ Render) ==========
+# ========== ADMIN & PUBLIC API ==========
 @app.get("/admin/brands")
-def admin_get_brands():
-    return {
-        "apple": {"name": "Apple iPhone", "icon": "🍎", "models": ["14", "13", "12", "11", "SE"]},
-        "samsung": {"name": "Samsung", "icon": "📱", "models": ["S24", "S23", "S22", "A54"]},
-        "xiaomi": {"name": "Xiaomi", "icon": "📱", "models": ["13", "12", "11"]},
-        "canon": {"name": "Canon", "icon": "📷", "models": ["R50", "R10", "R8"]}
-    }
+async def admin_get_brands():
+    if DB_READY:
+        return await mongo_db.get_brands()
+    return {}
+
+@app.delete("/admin/brand/{brand_id}")
+async def admin_delete_brand(brand_id: str):
+    if DB_READY:
+        success = await mongo_db.delete_brand(brand_id)
+        return {"success": success, "message": f"Deleted {brand_id}"}
+    return {"success": False, "error": "Database not ready"}
 
 @app.get("/admin/products/all")
-def admin_get_products():
-    return {
-        "apple_14": {"brand": "apple", "model": "14", "new_price": 32900, "secondhand_avg": 25000, "buy_price": 22000},
-        "apple_13": {"brand": "apple", "model": "13", "new_price": 29900, "secondhand_avg": 18000, "buy_price": 15000},
-        "canon_r50": {"brand": "canon", "model": "R50", "new_price": 25900, "secondhand_avg": 18000, "buy_price": 13000}
-    }
+async def admin_get_products():
+    if DB_READY:
+        return await mongo_db.get_products()
+    return {}
+
+@app.delete("/admin/product/{product_key}")
+async def admin_delete_product(product_key: str):
+    if DB_READY:
+        success = await mongo_db.delete_product(product_key)
+        return {"success": success, "message": f"Deleted {product_key}"}
+    return {"success": False, "error": "Database not ready"}
 
 @app.get("/admin/history")
-def admin_get_history():
+async def admin_get_history(limit: int = 50):
+    if DB_READY:
+        return await mongo_db.get_history(limit)
     return []
 
 @app.get("/public/brands")
-def public_get_brands():
-    return {
-        "apple": {"name": "Apple iPhone", "icon": "🍎", "models": ["14", "13", "12"]},
-        "samsung": {"name": "Samsung", "icon": "📱", "models": ["S24", "S23", "S22"]},
-        "canon": {"name": "Canon", "icon": "📷", "models": ["R50"]}
-    }
+async def public_get_brands():
+    if DB_READY:
+        return await mongo_db.get_brands()
+    return {}
 
 if __name__ == "__main__":
     import uvicorn
