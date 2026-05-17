@@ -1,22 +1,26 @@
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from PIL import Image
 import io
 import json
 import os
+import sys
+from datetime import datetime
+
+# OpenCV fallback
 try:
     import cv2
     CV2_AVAILABLE = True
 except ImportError:
     CV2_AVAILABLE = False
     print("⚠️ OpenCV not available - using simple mode")
+
 import numpy as np
-from datetime import datetime
 
 # Database
-import sys
-sys.path.append('C:\\Users\\EC\\secondhand_valuation')
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 try:
     from app.database import db
     print("✅ Database loaded successfully")
@@ -31,12 +35,21 @@ except Exception as e:
 
 app = FastAPI(title="Second-hand Valuation API")
 
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ✅ Static Files (สำหรับให้บริการหน้าเว็บ)
+frontend_path = os.path.join(os.path.dirname(__file__), '..', 'frontend')
+if os.path.exists(frontend_path):
+    app.mount("/static", StaticFiles(directory=frontend_path), name="static")
+    print(f"✅ Static files mounted from {frontend_path}")
+else:
+    print(f"⚠️ Frontend folder not found at {frontend_path}")
 
 def load_price_data():
     """โหลดข้อมูลราคาจาก database (Admin จัดการ)"""
@@ -64,12 +77,11 @@ def load_price_data():
 
 def check_image_quality(image_array):
     """ตรวจสอบคุณภาพรูปภาพ (ความชัด, แสงสว่าง)"""
+    if not CV2_AVAILABLE:
+        return {'score': 100, 'warnings': [], 'blur_score': 100, 'brightness': 128}
+    
     gray = cv2.cvtColor(image_array, cv2.COLOR_RGB2GRAY)
-    
-    # ตรวจสอบความคมชัด (Laplacian variance)
     laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
-    
-    # ตรวจสอบความสว่าง
     brightness = np.mean(gray)
     
     quality_score = 100
@@ -99,53 +111,31 @@ def check_image_quality(image_array):
         'brightness': brightness
     }
 
-
-def detect_defects(image_array):
-    if not CV2_AVAILABLE:
-        # ถ้าไม่มี OpenCV ให้ return ค่าเริ่มต้น
-        return [], 0.01
-    
-    # ... code เดิม
 def detect_defects_advanced(image_array):
-    """ตรวจจับรอยขีดข่วนและตำหนิขั้นสูง (ปรับสำหรับกล้อง/ของใหม่)"""
-    gray = cv2.cvtColor(image_array, cv2.COLOR_RGB2GRAY)
+    """ตรวจจับรอยขีดข่วนและตำหนิขั้นสูง"""
+    if not CV2_AVAILABLE:
+        return [], 0.01, {'score': 100, 'warnings': []}
     
-    # ตรวจสอบคุณภาพรูป
+    gray = cv2.cvtColor(image_array, cv2.COLOR_RGB2GRAY)
     quality = check_image_quality(image_array)
     
     if quality['score'] < 50:
-        return ["⚠️ " + q for q in quality['warnings']], 0.01, quality
+        return [f"⚠️ {w}" for w in quality['warnings']], 0.01, quality
     
-    # ลดขนาดรูปเพื่อลด noise
     h, w = gray.shape
     if h > 800 or w > 800:
         scale = 800 / max(h, w)
         new_size = (int(w * scale), int(h * scale))
         gray = cv2.resize(gray, new_size)
     
-    # ใช้ Gaussian blur ลด noise
     blurred = cv2.GaussianBlur(gray, (7, 7), 0)
-    
-    # ใช้ adaptive threshold แทน Canny
-    # ปรับพารามิเตอร์ให้เหมาะสม
-    edges = cv2.Canny(blurred, 150, 250)  # เพิ่ม threshold สูงขึ้น
-    
-    # คำนวณ edge density (จำกัดค่าสูงสุด)
+    edges = cv2.Canny(blurred, 150, 250)
     edge_density = np.sum(edges) / (edges.shape[0] * edges.shape[1])
-    
-    # ปรับแก้ให้อยู่ในช่วง 0-0.5 (normalize)
     edge_density = min(0.5, edge_density)
-    
-    # ปรับแก้สำหรับกล้อง (ลดความไวลงอย่างมาก)
-    # ใช้สูตรใหม่: damage_score = edge_density * 0.1
-    adjusted_score = edge_density * 0.08  # ลดจาก 0.5 เหลือ 0.08
-    
-    # จำกัดค่าไม่ให้เกิน 0.3
+    adjusted_score = edge_density * 0.08
     adjusted_score = min(0.3, adjusted_score)
     
     defects = []
-    
-    # เกณฑ์ที่ผ่อนปรนมาก
     if adjusted_score > 0.06:
         defects.append("รอยขีดข่วนเล็กน้อย")
     if adjusted_score > 0.12:
@@ -153,12 +143,9 @@ def detect_defects_advanced(image_array):
     if adjusted_score > 0.20:
         defects.append("สภาพโทรมหนัก")
     
-    # ถ้าคะแนนน้อยมาก ให้ถือว่าไม่มีตำหนิ
     if adjusted_score < 0.03:
         defects = []
         adjusted_score = 0.01
-    
-    print(f"   Edge density: {edge_density:.4f} -> Adjusted damage: {adjusted_score:.4f}")
     
     return defects, adjusted_score, quality
 
@@ -166,9 +153,6 @@ def analyze_condition(image, image_count=1):
     image_array = np.array(image)
     defects, damage_score, quality = detect_defects_advanced(image_array)
     
-    print(f"📊 Final damage_score: {damage_score:.4f}, quality_score: {quality['score']}")
-    
-    # ปรับปรุงการให้คะแนน (damage_score ควรน้อยกว่า 0.3)
     if damage_score < 0.01:
         condition_score = 100
     elif damage_score < 0.02:
@@ -192,7 +176,6 @@ def analyze_condition(image, image_count=1):
     
     condition_score = round(condition_score)
     
-    # กำหนดเกรด
     if condition_score >= 92:
         grade = 'A'
         multiplier = 0.97
@@ -232,30 +215,19 @@ def analyze_condition(image, image_count=1):
     }
 
 def calculate_price(brand, model, condition_multiplier, age_months=12, has_box=True, has_charger=True):
-    """คำนวณราคาโดยใช้ข้อมูลจาก Admin"""
     product = db.get_product_price(brand, model)
     
     if product:
         new_price = product['new_price']
         base_secondhand = product['secondhand_avg']
         buy_price = product.get('buy_price', base_secondhand * 0.7)
-        print(f"✅ Found product: {brand} {model} - secondhand price {base_secondhand:,} ฿")
     else:
         new_price = 15000
         base_secondhand = 8000
         buy_price = 5000
-        print(f"⚠️ Product not found: {brand} {model} - using default values")
     
-    # ค่าเสื่อมตามอายุ (2% ต่อเดือน สูงสุด 50%)
     age_depreciation = min(0.5, age_months * 0.02)
-    
-    # โบนัสอุปกรณ์
-    accessory_bonus = 0
-    if has_box:
-        accessory_bonus += 0.05
-    if has_charger:
-        accessory_bonus += 0.03
-    
+    accessory_bonus = (0.05 if has_box else 0) + (0.03 if has_charger else 0)
     final_price = base_secondhand * condition_multiplier * (1 - age_depreciation) * (1 + accessory_bonus)
     
     return {
@@ -299,7 +271,6 @@ async def evaluate_phone(
         condition = analyze_condition(image, image_count)
         price_result = calculate_price(brand, model, condition['multiplier'], age_months, has_box, has_charger)
         
-        # บันทึกประวัติ
         try:
             db.add_history({
                 'product': f"{brand}_{model}",
@@ -310,11 +281,9 @@ async def evaluate_phone(
                 'buy_price': price_result['buy_price'],
                 'defects': condition['defects']
             })
-            print("✅ History saved")
-        except Exception as e:
-            print(f"⚠️ Failed to save history: {e}")
+        except:
+            pass
         
-        # เพิ่มจำนวนรูปที่ใช้ในการประเมิน
         condition['image_count'] = image_count
         
         result = {
@@ -338,12 +307,9 @@ async def evaluate_phone(
             'recommendation': get_recommendation(condition['grade'], price_result['price'], price_result['buy_price'], condition['grade_desc'])
         }
         
-        print(f"📱 Result: Grade {condition['grade']} ({condition['score']}/100) - Price {price_result['price']:,} ฿")
-        
         return JSONResponse(result)
     
     except Exception as e:
-        print(f"Error: {e}")
         return JSONResponse({'success': False, 'error': str(e)}, status_code=400)
 
 def get_recommendation(grade, price, buy_price, grade_desc):
