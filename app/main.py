@@ -246,6 +246,7 @@ def calculate_price(brand, model, condition_multiplier, age_months=12, has_box=T
         }
     }
 
+# ========== MAIN API ENDPOINTS ==========
 @app.get("/")
 def root():
     return {"message": "Second-hand Valuation System API", "status": "running"}
@@ -321,6 +322,65 @@ def get_recommendation(grade, price, buy_price, grade_desc):
         return f"⚠️ {grade_desc} แนะนำขาย {price:,} บาท หรือลดอีก 5% เพื่อขายเร็ว | รับซื้อ {buy_price:,} บาท"
     else:
         return f"🔧 {grade_desc} ขาย {price:,} บาท หรือซ่อมก่อนขาย | รับซื้อ {buy_price:,} บาท"
+
+# ========== ADMIN API (ไม่มี Authentication สำหรับ Render) ==========
+@app.get("/admin/brands")
+def admin_get_brands():
+    """ดึงข้อมูลยี่ห้อ"""
+    try:
+        brands_file = 'data/brands.json'
+        if os.path.exists(brands_file):
+            with open(brands_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except:
+        pass
+    return {
+        "apple": {"name": "Apple iPhone", "icon": "🍎", "models": ["14", "13", "12"]},
+        "samsung": {"name": "Samsung", "icon": "📱", "models": ["S24", "S23", "S22"]},
+        "xiaomi": {"name": "Xiaomi", "icon": "📱", "models": ["13", "12"]}
+    }
+
+@app.get("/admin/products/all")
+def admin_get_products():
+    """ดึงข้อมูลสินค้าทั้งหมด"""
+    try:
+        products_file = 'data/products.json'
+        if os.path.exists(products_file):
+            with open(products_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except:
+        pass
+    return {}
+
+@app.get("/admin/history")
+def admin_get_history(limit: int = 50):
+    """ดึงประวัติการประเมิน"""
+    try:
+        history_file = 'data/history.json'
+        if os.path.exists(history_file):
+            with open(history_file, 'r', encoding='utf-8') as f:
+                history = json.load(f)
+                return history[-limit:]
+    except:
+        pass
+    return []
+
+# Public API สำหรับหน้า Main
+@app.get("/public/brands")
+def public_get_brands():
+    """API สำหรับหน้า Main ใช้ดึงข้อมูลยี่ห้อ"""
+    try:
+        brands_file = 'data/brands.json'
+        if os.path.exists(brands_file):
+            with open(brands_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except:
+        pass
+    return {
+        "apple": {"name": "Apple iPhone", "icon": "🍎", "models": ["14", "13", "12"]},
+        "samsung": {"name": "Samsung", "icon": "📱", "models": ["S24", "S23", "S22"]},
+        "xiaomi": {"name": "Xiaomi", "icon": "📱", "models": ["13", "12"]}
+    }
 
 if __name__ == "__main__":
     import uvicorn
