@@ -466,7 +466,7 @@
             const auth = btoa(`${username}:${password}`);
             
             try {
-                const response = await fetch('http://localhost:8002/admin/brands', {
+                const response = await fetch('/admin/brands', {
                     headers: { 'Authorization': `Basic ${auth}` }
                 });
                 
@@ -734,7 +734,7 @@
                 options.body = JSON.stringify(body);
             }
             
-            const response = await fetch(`http://localhost:8002${endpoint}`, options);
+            const response = await fetch(`${endpoint}`, options);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return await response.json();
         }
