@@ -43,16 +43,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ Static Files (สำหรับให้บริการหน้าเว็บ)
+# Static Files
 frontend_path = os.path.join(os.path.dirname(__file__), '..', 'frontend')
 if os.path.exists(frontend_path):
     app.mount("/static", StaticFiles(directory=frontend_path), name="static")
     print(f"✅ Static files mounted from {frontend_path}")
-else:
-    print(f"⚠️ Frontend folder not found at {frontend_path}")
 
 def load_price_data():
-    """โหลดข้อมูลราคาจาก database (Admin จัดการ)"""
     products = db.get_products()
     prices = {}
     for key, product in products.items():
@@ -63,20 +60,14 @@ def load_price_data():
         }
     
     if not prices:
-        print("⚠️ No data in database, using default prices")
         prices = {
             "iphone_14": {"new_price": 32900, "secondhand_avg": 25000, "buy_price": 22000},
             "iphone_13": {"new_price": 29900, "secondhand_avg": 18000, "buy_price": 15000},
             "iphone_12": {"new_price": 25900, "secondhand_avg": 13000, "buy_price": 10000},
-            "samsung_s23": {"new_price": 28900, "secondhand_avg": 19000, "buy_price": 16000},
-            "samsung_s22": {"new_price": 26900, "secondhand_avg": 14000, "buy_price": 11000},
-            "xiaomi_12": {"new_price": 16900, "secondhand_avg": 9000, "buy_price": 7000}
         }
-    
     return prices
 
 def check_image_quality(image_array):
-    """ตรวจสอบคุณภาพรูปภาพ (ความชัด, แสงสว่าง)"""
     if not CV2_AVAILABLE:
         return {'score': 100, 'warnings': [], 'blur_score': 100, 'brightness': 128}
     
@@ -100,19 +91,10 @@ def check_image_quality(image_array):
     elif brightness < 80:
         quality_score -= 15
         warnings.append("ภาพค่อนข้างมืด")
-    elif brightness > 220:
-        quality_score -= 15
-        warnings.append("ภาพสว่างเกินไป")
     
-    return {
-        'score': max(0, quality_score),
-        'warnings': warnings,
-        'blur_score': laplacian_var,
-        'brightness': brightness
-    }
+    return {'score': max(0, quality_score), 'warnings': warnings, 'blur_score': laplacian_var, 'brightness': brightness}
 
 def detect_defects_advanced(image_array):
-    """ตรวจจับรอยขีดข่วนและตำหนิขั้นสูง"""
     if not CV2_AVAILABLE:
         return [], 0.01, {'score': 100, 'warnings': []}
     
@@ -140,8 +122,6 @@ def detect_defects_advanced(image_array):
         defects.append("รอยขีดข่วนเล็กน้อย")
     if adjusted_score > 0.12:
         defects.append("รอยขีดข่วนชัดเจน")
-    if adjusted_score > 0.20:
-        defects.append("สภาพโทรมหนัก")
     
     if adjusted_score < 0.03:
         defects = []
@@ -155,22 +135,14 @@ def analyze_condition(image, image_count=1):
     
     if damage_score < 0.01:
         condition_score = 100
-    elif damage_score < 0.02:
-        condition_score = 98
     elif damage_score < 0.03:
         condition_score = 95
-    elif damage_score < 0.04:
-        condition_score = 92
     elif damage_score < 0.06:
         condition_score = 88
-    elif damage_score < 0.08:
-        condition_score = 82
     elif damage_score < 0.10:
         condition_score = 75
     elif damage_score < 0.15:
         condition_score = 65
-    elif damage_score < 0.20:
-        condition_score = 55
     else:
         condition_score = max(0, 100 - (damage_score * 200))
     
@@ -205,12 +177,8 @@ def analyze_condition(image, image_count=1):
         defects.extend([f"⚠️ {w}" for w in quality['warnings']])
     
     return {
-        'grade': grade,
-        'grade_desc': grade_desc,
-        'score': condition_score,
-        'multiplier': multiplier,
-        'defects': defects,
-        'damage_score': round(damage_score, 4),
+        'grade': grade, 'grade_desc': grade_desc, 'score': condition_score,
+        'multiplier': multiplier, 'defects': defects, 'damage_score': round(damage_score, 4),
         'confidence': 0.92 if condition_score >= 85 else 0.85
     }
 
@@ -218,11 +186,9 @@ def calculate_price(brand, model, condition_multiplier, age_months=12, has_box=T
     product = db.get_product_price(brand, model)
     
     if product:
-        new_price = product['new_price']
         base_secondhand = product['secondhand_avg']
         buy_price = product.get('buy_price', base_secondhand * 0.7)
     else:
-        new_price = 15000
         base_secondhand = 8000
         buy_price = 5000
     
@@ -232,28 +198,20 @@ def calculate_price(brand, model, condition_multiplier, age_months=12, has_box=T
     
     return {
         'price': round(final_price),
-        'price_range': {
-            'min': round(final_price * 0.85),
-            'max': round(final_price * 1.15)
-        },
+        'price_range': {'min': round(final_price * 0.85), 'max': round(final_price * 1.15)},
         'buy_price': round(buy_price * condition_multiplier * (1 - age_depreciation) * 0.9),
         'factors': {
             'condition_multiplier': condition_multiplier,
             'age_depreciation': round(age_depreciation, 2),
             'accessory_bonus': accessory_bonus,
-            'new_price': new_price,
             'market_avg': base_secondhand
         }
     }
 
-# ========== MAIN API ENDPOINTS ==========
+# ========== MAIN API ==========
 @app.get("/")
 def root():
     return {"message": "Second-hand Valuation System API", "status": "running"}
-
-@app.get("/products")
-def get_products():
-    return load_price_data()
 
 @app.post("/evaluate")
 async def evaluate_phone(
@@ -268,118 +226,66 @@ async def evaluate_phone(
     try:
         contents = await file.read()
         image = Image.open(io.BytesIO(contents)).convert('RGB')
-        
         condition = analyze_condition(image, image_count)
         price_result = calculate_price(brand, model, condition['multiplier'], age_months, has_box, has_charger)
-        
-        try:
-            db.add_history({
-                'product': f"{brand}_{model}",
-                'condition': condition['grade'],
-                'condition_score': condition['score'],
-                'damage_score': condition['damage_score'],
-                'price': price_result['price'],
-                'buy_price': price_result['buy_price'],
-                'defects': condition['defects']
-            })
-        except:
-            pass
-        
-        condition['image_count'] = image_count
         
         result = {
             'success': True,
             'product': {'brand': brand, 'model': model},
             'condition': {
-                'grade': condition['grade'],
-                'grade_desc': condition['grade_desc'],
-                'score': condition['score'],
-                'defects': condition['defects'],
-                'confidence': condition['confidence'],
-                'damage_score': condition['damage_score'],
+                'grade': condition['grade'], 'grade_desc': condition['grade_desc'],
+                'score': condition['score'], 'defects': condition['defects'],
+                'confidence': condition['confidence'], 'damage_score': condition['damage_score'],
                 'image_count': image_count
             },
             'valuation': {
-                'median_price': price_result['price'],
-                'price_range': price_result['price_range'],
-                'buy_price': price_result['buy_price'],
-                'factors': price_result['factors']
+                'median_price': price_result['price'], 'price_range': price_result['price_range'],
+                'buy_price': price_result['buy_price'], 'factors': price_result['factors']
             },
             'recommendation': get_recommendation(condition['grade'], price_result['price'], price_result['buy_price'], condition['grade_desc'])
         }
-        
         return JSONResponse(result)
-    
     except Exception as e:
         return JSONResponse({'success': False, 'error': str(e)}, status_code=400)
 
 def get_recommendation(grade, price, buy_price, grade_desc):
     if grade == 'A':
-        return f"✨ {grade_desc} ({price:,} บาท) เหมาะสำหรับขายต่อหรือใช้เอง | รับซื้อ {buy_price:,} บาท"
+        return f"✨ {grade_desc} ({price:,} บาท) เหมาะสำหรับขายต่อ | รับซื้อ {buy_price:,} บาท"
     elif grade == 'B':
         return f"👍 {grade_desc} ขายได้จริงที่ {price:,} บาท | รับซื้อ {buy_price:,} บาท"
     elif grade == 'C':
-        return f"⚠️ {grade_desc} แนะนำขาย {price:,} บาท หรือลดอีก 5% เพื่อขายเร็ว | รับซื้อ {buy_price:,} บาท"
+        return f"⚠️ {grade_desc} แนะนำขาย {price:,} บาท | รับซื้อ {buy_price:,} บาท"
     else:
         return f"🔧 {grade_desc} ขาย {price:,} บาท หรือซ่อมก่อนขาย | รับซื้อ {buy_price:,} บาท"
 
-# ========== ADMIN API (ไม่มี Authentication สำหรับ Render) ==========
+# ========== ADMIN & PUBLIC API (สำหรับ Render) ==========
 @app.get("/admin/brands")
 def admin_get_brands():
-    """ดึงข้อมูลยี่ห้อ"""
-    try:
-        brands_file = 'data/brands.json'
-        if os.path.exists(brands_file):
-            with open(brands_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-    except:
-        pass
     return {
-        "apple": {"name": "Apple iPhone", "icon": "🍎", "models": ["14", "13", "12"]},
-        "samsung": {"name": "Samsung", "icon": "📱", "models": ["S24", "S23", "S22"]},
-        "xiaomi": {"name": "Xiaomi", "icon": "📱", "models": ["13", "12"]}
+        "apple": {"name": "Apple iPhone", "icon": "🍎", "models": ["14", "13", "12", "11", "SE"]},
+        "samsung": {"name": "Samsung", "icon": "📱", "models": ["S24", "S23", "S22", "A54"]},
+        "xiaomi": {"name": "Xiaomi", "icon": "📱", "models": ["13", "12", "11"]},
+        "canon": {"name": "Canon", "icon": "📷", "models": ["R50", "R10", "R8"]}
     }
 
 @app.get("/admin/products/all")
 def admin_get_products():
-    """ดึงข้อมูลสินค้าทั้งหมด"""
-    try:
-        products_file = 'data/products.json'
-        if os.path.exists(products_file):
-            with open(products_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-    except:
-        pass
-    return {}
+    return {
+        "apple_14": {"brand": "apple", "model": "14", "new_price": 32900, "secondhand_avg": 25000, "buy_price": 22000},
+        "apple_13": {"brand": "apple", "model": "13", "new_price": 29900, "secondhand_avg": 18000, "buy_price": 15000},
+        "canon_r50": {"brand": "canon", "model": "R50", "new_price": 25900, "secondhand_avg": 18000, "buy_price": 13000}
+    }
 
 @app.get("/admin/history")
-def admin_get_history(limit: int = 50):
-    """ดึงประวัติการประเมิน"""
-    try:
-        history_file = 'data/history.json'
-        if os.path.exists(history_file):
-            with open(history_file, 'r', encoding='utf-8') as f:
-                history = json.load(f)
-                return history[-limit:]
-    except:
-        pass
+def admin_get_history():
     return []
 
-# Public API สำหรับหน้า Main
 @app.get("/public/brands")
 def public_get_brands():
-    """API สำหรับหน้า Main ใช้ดึงข้อมูลยี่ห้อ"""
-    try:
-        brands_file = 'data/brands.json'
-        if os.path.exists(brands_file):
-            with open(brands_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-    except:
-        pass
     return {
         "apple": {"name": "Apple iPhone", "icon": "🍎", "models": ["14", "13", "12"]},
         "samsung": {"name": "Samsung", "icon": "📱", "models": ["S24", "S23", "S22"]},
-        "xiaomi": {"name": "Xiaomi", "icon": "📱", "models": ["13", "12"]}
+        "canon": {"name": "Canon", "icon": "📷", "models": ["R50"]}
     }
 
 if __name__ == "__main__":
